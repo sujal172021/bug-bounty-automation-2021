@@ -10,5 +10,6 @@ how to setup it
 7. rm -r bug-bounty-automation-2021
 
 how to use it usage 
-please change teget in scope.txt
-./recon.sh scope.txt
+1. please change teget in scope.txt
+2. ./recon.sh scope.txt
+
