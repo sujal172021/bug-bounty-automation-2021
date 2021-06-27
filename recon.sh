@@ -16,7 +16,9 @@ domain_enum(){
 
 	do
 
-		mkdir -p $domain $domain/sources $domain/Recon/hidden_dir $domain/Recon/nuclei $domain/Recon/wayback $domain/Recon/gf $domain/Recon/wordlist $domain/Recon/masscan $domain/Recon/vulnerabilities $domain/Recon/scree_shoort $domain/Recon/API_secret
+		mkdir -p $domain $domain/sources $domain/Recon/hidden_dir $domain/Recon/nuclei $domain/Recon/wayback $domain/Recon/gf $domain/Recon/wordlist $domain/Recon/masscan $domain/Recon/vulnerabilities $domain/Recon/scree_shoort $domain/Recon/API_secret $domain/Recon/git-dorking
+    
+        cd /root/basic-recon/$domain/Recon/git-dorking/ && touch dorking.txt && cd  /root/basic-recon/
 
 		printf "\n\n---------------------------------------------\n"
 		printf "          \e[33mSubfinder Is Starting ...\e[0m                  "
@@ -52,7 +54,7 @@ domain_enum(){
 		printf "          \e[33mKnockknock Is Starting ...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-	cd /root/tools/knock/knockpy/ &&  python3 knockpy.py $domain --no-http --no-local  -o /root/basic-recon/$domain/sources/
+	     cd /root/tools/knock/knockpy/ &&  python3 knockpy.py $domain --no-http --no-local  -o /root/basic-recon/$domain/sources/
 
 
 		printf "\n\n---------------------------------------------\n"
@@ -95,7 +97,7 @@ http_prob(){
 		printf "          \e[33mHTTPS Probe Is Starting ...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-		cat $domain/domains.txt | httpx -threads 300 -o $domain/Recon/url.txt
+		cat $domain/domains.txt | httpx -threads 100 -o $domain/Recon/url.txt
 
 		cat $domain/domains.txt | httprobe -t 100 | tee $domain/Recon/all_url.txt
 
@@ -115,7 +117,7 @@ check_state(){
 		printf "          \e[33mcheck_state...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-	cat $domain/domains.txt | parallel -j50 -q curl -w 'Status:%{http_code}\t  Size:%{size_download}\t %{url_effective}\n' -o /dev/null -sk
+	   cat $domain/domains.txt | parallel -j50 -q curl -w 'Status:%{http_code}\t  Size:%{size_download}\t %{url_effective}\n' -o /dev/null -sk
 
 done
 }
@@ -185,7 +187,7 @@ valid_urls(){
 		printf "          \e[33mFuzzing Is Starting ...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-		fuzzer -s -c -u "FUZZ" -w $domain/Recon/wayback/wayback.txt -of csv -o $domain/Recon/wayback/valid-tmp.txt
+		fuzzer -c -u "FUZZ" -w $domain/Recon/wayback/wayback.txt -of csv -o $domain/Recon/wayback/valid-tmp.txt
 
 		cat $domain/Recon/wayback/valid-tmp.txt | grep http | awk -F "," '{print $1}' >> $domain/Recon/wayback/valid.txt
 
@@ -234,25 +236,21 @@ gf_patterns(){
 
 		gf ssrf $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/ssrf.txt
 
-		gf aws-keys_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/aws-keys_secrets.txt
-
-		gf aws-s3_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/aws-s3_secrets.txt
-
 		gf aws-keys $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/aws-keys.txt
-
-		gf asymmetric-keys_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/asymmetric-keys_secrets.txt
-
-		gf github_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/github_secrets.txt
-
-		gf firebase_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/firebase_secrets.txt
 
 		gf s3-buckets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/s3-buckets.txt
 
-		gf slack-token_secrets $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/slack-token_secrets.txt
-
 		gf servers $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/servers.txt
 
+		gf debug-pages $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/debug-pages.txt
+
 		gf upload-fields $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/upload-fields.txt
+
+		gf php-sources $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/php-sources.txt
+
+		gf takeovers $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/takeovers.txt
+
+		gf firebase $domain/Recon/wayback/valid.txt | tee  $domain/Recon/gf/firebase.txt
 
 	done
 
@@ -289,7 +287,7 @@ get_ip(){
 		printf "          \e[33m Starting get_ip ...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-		$resolve_domain $domain/Recon/masscan/results.txt $domain/domains.txt
+		$resolve_domain $domain/Recon/masscan/results.txt  $domain/domains.txt
 
 		gf ip $domain/Recon/masscan/results.txt | sort -u > $domain/Recon/masscan/ip.txt
 		
@@ -324,9 +322,7 @@ hidden(){
 
 		cd /root/tools/dirsearch/
 
-		python3 dirsearch.py -u $domain -t 80 -o $domain
-
-		mv $domain /root/basic-recon/$domain/Recon/hidden_dir/
+		python3 dirsearch.py -u $domain -t 100 -o /root/basic-recon/$domain/Recon/hidden_dir/$domain.txt
 
 		cd /root/basic-recon/
 
@@ -346,8 +342,7 @@ github_secrets(){
 
 		cd /root/tools/git-hound
 
-		git-hound --subdomain-file /root/basic-recon/$domain/domains.txt  /root/basic-recon/$domain/Recon/git-dorking/dorking.txt
-
+		./git-hound --subdomain-file /root/basic-recon/$domain/domains.txt >> /root/basic-recon/$domain/Recon/git-dorking/dorking.txt
 		cd /root/basic-recon/
 
 	done
@@ -367,9 +362,9 @@ API_secret(){
 
 		cp /root/basic-recon/$domain/Recon/wayback/wayback.txt /root/basic-recon/$domain/Recon/API_secret/wayback.txt
 
-		gau $domain -v -t 1000 -o $domain
+		gau $domain -v -t 100 | tee  gau.txt
 
-		sort $domain wayback.txt | uniq -u >  uniq_files.txt
+		sort gau.txt wayback.txt  | uniq -u > uniq_files.txt
 
 		cat uniq_files.txt | egrep -v "\.woff|\.svg|\.ttf|\.eot|\.png|\.jpeg|\.jpg|\.css|\.ico" >> wayback_only_html.txt
 
@@ -399,10 +394,25 @@ find_xss(){
 		printf "          \e[33mXSS find_xss Is Starting ...\e[0m                  "
 		printf "\n---------------------------------------------\n\n"
 
-
-		cat $domain/Recon/url.txt |  dalfox pipe --skip-bav | tee $domain/Recon/Recon/vulnerabilities/dalfox_xss.txt  
+        cat att.com/Recon/gf/xss.txt | grep "source=" |  qsreplace '"><script>confirm(1)</script>' | while read host do ; do curl --silent --path-as-is --insecure "$host" | grep -qs "<script>confirm(1)" && echo "$host \033[0;31mVulnerable\n" || echo "$host \033[0;32mNot Vulnerable\n" | >>  /root/basic-recon/$domain/Recon/vulnerabilities/xss.txt ; done               
+		
+		cat $domain/Recon/url.txt |  dalfox pipe | tee $domain/Recon/Recon/vulnerabilities/dalfox_xss.txt  
 
 	done
 
 }
 find_xss
+Heardbleeds_vulnerability(){
+
+	for domain in $(cat $range);
+
+	do
+
+
+        cat $domain/Recon/all_url.txt | while read line ; do echo "QUIT" | openssl s_client -connect $line:443 2>&1 | grep 'server extension "heartbeat" (id=15)' || echo $line: safe | tee $domain/Recon/vulnerabilities/Heartbleed-vulnerability.txt; done
+
+     done 
+
+}
+
+Heardbleeds_vulnerability
